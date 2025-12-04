@@ -26,7 +26,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 segundos timeout
+  timeout: 30000, // 30 segundos timeout (aumentado para operaciones que incluyen envío de emails)
 })
 
 // Agregar token a cada request
