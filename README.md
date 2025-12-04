@@ -20,6 +20,8 @@ Frontend del Sistema de Gestión Veterinaria desarrollado con Vue 3, Vite y Vuet
 4. **Pacientes** - Gestión de mascotas
 5. **Clientes** - Gestión de propietarios
 6. **Facturas** - Facturación y pagos
+7. **Inventario** - Gestión de productos
+8. **Usuarios** - Gestión de usuarios y permisos
 
 ## 🛠️ Instalación
 
@@ -40,6 +42,46 @@ npm run preview
 npm run lint
 ```
 
+## 🔧 Configuración
+
+### Variables de Entorno
+
+Crea un archivo `.env.local` en la raíz del proyecto:
+
+```env
+# URL del backend API
+# En desarrollo, se usa el proxy de Vite (/api)
+# En producción, debe apuntar a la URL completa del backend
+VITE_API_URL=https://proyecto-nuclear-veterinaria-production.up.railway.app
+```
+
+**Nota:** En desarrollo local, el proxy de Vite redirige `/api` a `http://localhost:8080`, por lo que no necesitas configurar `VITE_API_URL` para desarrollo.
+
+### Desarrollo Local
+
+1. Asegúrate de que el backend esté corriendo en `http://localhost:8080`
+2. Ejecuta `npm run dev`
+3. El frontend estará disponible en `http://localhost:3000`
+
+## 🌐 Conexión al Backend
+
+### Desarrollo
+
+El proxy de Vite redirige las llamadas a `/api` hacia `http://localhost:8080`:
+
+```javascript
+proxy: {
+  '/api': {
+    target: 'http://localhost:8080',
+    changeOrigin: true,
+  },
+}
+```
+
+### Producción
+
+En producción, el frontend usa la variable de entorno `VITE_API_URL` para conectarse al backend. Si no está configurada, intentará usar `/api` (útil si el frontend y backend están en el mismo dominio).
+
 ## 📁 Estructura del Proyecto
 
 ```
@@ -52,9 +94,14 @@ frontend/
 │   ├── router/
 │   │   └── index.js            # Rutas y guards
 │   ├── stores/
-│   │   └── authStore.js        # Store de autenticación (Pinia)
+│   │   ├── authStore.js        # Store de autenticación (Pinia)
+│   │   ├── citasStore.js       # Store de citas
+│   │   ├── clientesStore.js    # Store de clientes
+│   │   └── ...                 # Otros stores
 │   ├── composables/
-│   │   └── useApi.js           # Composable para API HTTP
+│   │   ├── useApi.js           # Composable para API HTTP
+│   │   ├── useNotification.js  # Notificaciones
+│   │   └── useReferenceData.js # Datos de referencia
 │   └── views/
 │       ├── LoginView.vue       # Vista de login
 │       ├── DashboardView.vue   # Dashboard principal
@@ -62,13 +109,13 @@ frontend/
 │       ├── PacientesView.vue   # Listado de pacientes
 │       ├── ClientesView.vue    # Listado de clientes
 │       ├── FacturasView.vue    # Listado de facturas
-│       ├── citas/              # Vistas de citas
-│       ├── pacientes/          # Vistas de pacientes
-│       ├── clientes/           # Vistas de clientes
-│       └── facturas/           # Vistas de facturas
+│       └── ...                 # Otras vistas
 ├── index.html                  # HTML principal
 ├── vite.config.js              # Configuración de Vite
 ├── package.json                # Dependencias
+├── Dockerfile                  # Docker para Railway
+├── railway.json                # Configuración Railway
+├── netlify.toml                # Configuración Netlify
 └── README.md                   # Este archivo
 ```
 
@@ -82,24 +129,10 @@ El frontend utiliza JWT (JSON Web Tokens) para autenticación:
 4. Se envía en cada request en el header `Authorization: Bearer <token>`
 5. Si el token expira, el usuario es redirigido a login
 
-## 🌐 Conexión al Backend
-
-El proxy de Vite redirije las llamadas a `/api` hacia `http://localhost:8080`:
-
-```javascript
-proxy: {
-  '/api': {
-    target: 'http://localhost:8080',
-    changeOrigin: true,
-  },
-}
-```
-
-Para cambiar la URL del backend, modifica `vite.config.js`.
-
 ## 📱 Componentes principales
 
 ### Composable useApi
+
 Proporciona métodos para hacer requests HTTP con autenticación automática:
 
 ```javascript
@@ -111,6 +144,7 @@ const response = await get('/v1/citas')
 ```
 
 ### Store de Autenticación (Pinia)
+
 Gestiona el estado de autenticación:
 
 ```javascript
@@ -121,79 +155,61 @@ await authStore.login(email, password)
 authStore.logout()
 ```
 
-## 🎨 Tema y Estilos
+## 🚀 Despliegue
 
-Vuetify está configurado con un tema de color personalizado. Modifica el archivo `src/plugins/vuetify.js` para cambiar colores:
+### Netlify (Recomendado)
 
-```javascript
-const customTheme = {
-  colors: {
-    primary: '#1976D2',
-    secondary: '#424242',
-    // ... más colores
-  }
-}
-```
-
-## 🚀 Despliegue en Producción
-
-1. Build:
-   ```bash
-   npm run build
+1. Conecta tu repositorio en [netlify.com](https://netlify.com)
+2. Configura:
+   - **Build command**: `npm ci && npm run build`
+   - **Publish directory**: `dist`
+3. Agrega variable de entorno:
+   ```
+   VITE_API_URL=https://proyecto-nuclear-veterinaria-production.up.railway.app
    ```
 
-2. Los archivos compilados se generan en `dist/`
+### Railway
 
-3. Despliega el contenido de `dist/` en tu servidor web
-
-4. Configura el servidor web para servir `index.html` en rutas no encontradas (para que Vue Router funcione correctamente)
-
-Ejemplo con Nginx:
-```nginx
-location / {
-  try_files $uri $uri/ /index.html;
-}
-```
-
-## 📝 Guía de Desarrollo
-
-### Crear una nueva vista
-
-1. Crea el archivo en `src/views/MiVistaView.vue`
-2. Agrega la ruta en `src/router/index.js`
-3. Importa y usa la vista en el router
-
-### Agregar un endpoint de API
-
-1. Usa el composable `useApi` en tu componente:
-   ```javascript
-   const { get, post } = useApi()
-   const response = await get('/v1/mi-endpoint')
+1. Crea un nuevo servicio en Railway
+2. Conecta tu repositorio
+3. Railway detectará el `Dockerfile` automáticamente
+4. Agrega variable de entorno:
+   ```
+   VITE_API_URL=https://proyecto-nuclear-veterinaria-production.up.railway.app
    ```
 
-2. El token JWT se añade automáticamente en el header
+### Vercel
 
-### Estado global con Pinia
-
-1. Crea un nuevo store en `src/stores/`
-2. Define estado, acciones y getters
-3. Usa en componentes con `defineStore`
+1. Conecta tu repositorio en [vercel.com](https://vercel.com)
+2. Configura:
+   - **Framework Preset**: Vite
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+3. Agrega variable de entorno:
+   ```
+   VITE_API_URL=https://proyecto-nuclear-veterinaria-production.up.railway.app
+   ```
 
 ## 🐛 Troubleshooting
 
 ### El frontend no se conecta al backend
-- Verifica que el servidor Spring Boot esté corriendo en `http://localhost:8080`
+
+- Verifica que el servidor Spring Boot esté corriendo en `http://localhost:8080` (desarrollo)
+- Verifica que `VITE_API_URL` esté configurada correctamente (producción)
 - Comprueba la configuración del proxy en `vite.config.js`
 - Revisa la consola del navegador para errores CORS
 
 ### Token expirado
+
 - El token JWT se valida automáticamente
 - Si está expirado, se redirige a login
 - Los datos se guardan en `localStorage` bajo la clave `token`
 
 ### Errores de CORS
+
 - Asegúrate de que el backend tenga CORS habilitado
-- Verifica `app.cors.allowed-origins` en `application.properties` del backend
+- Verifica `CORS_ALLOWED_ORIGINS` en `application-prod.properties` del backend
+- Asegúrate de que la URL del frontend esté en la lista de orígenes permitidos
 
 ## 📚 Recursos
 
