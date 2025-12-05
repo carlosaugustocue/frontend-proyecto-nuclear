@@ -137,7 +137,7 @@
               color="primary"
               variant="flat"
               size="large"
-              href="http://localhost:3000"
+              to="/"
             >
               Volver al Inicio
             </v-btn>
@@ -151,9 +151,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import axios from 'axios'
+import { useApi } from '@/composables/useApi'
 
 const route = useRoute()
+const { post } = useApi()
 
 const loading = ref(true)
 const success = ref(false)
@@ -186,15 +187,10 @@ const confirmarCita = async () => {
   }
 
   try {
-    // Llamar al endpoint público de confirmación
-    const response = await axios.post(
-      `http://localhost:8080/api/v1/citas/confirmar-por-token?token=${token}`,
-      null,
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
+    // Llamar al endpoint público de confirmación usando useApi (maneja la URL correcta según el entorno)
+    const response = await post(
+      `/v1/citas/confirmar-por-token?token=${token}`,
+      null
     )
 
     // Si la confirmación fue exitosa
@@ -220,7 +216,7 @@ const confirmarCita = async () => {
       errorMessage.value = 'No se pudo conectar con el servidor. Por favor, intente más tarde.'
     } else {
       // Algo pasó al configurar la petición
-      errorMessage.value = 'Ocurrió un error inesperado. Por favor, intente más tarde.'
+      errorMessage.value = err.userMessage || err.message || 'Ocurrió un error inesperado. Por favor, intente más tarde.'
     }
   } finally {
     loading.value = false
